@@ -304,47 +304,51 @@ void ManualDayLenLightOverride(){
 
 void OpenDoor()
 {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Door Opening");
-  delay(500);
-  while( digitalRead(REED_OPENED) == HIGH) {
-    // while the open reed is not connected turn on motor A to open door
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    // set speed to 200 out of possible range 0~255
-    analogWrite(enA, door_open_speed);
-  
-    if(digitalRead(REED_OPENED) == LOW) {
-      // now turn off motors when door is opened
-      digitalWrite(in1, LOW);
+  if ( digitalRead(REED_OPENED) == HIGH) { // if door is not open, open it
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Door Opening");
+    delay(500);
+    while( digitalRead(REED_OPENED) == HIGH) {
+      // while the open reed is not connected turn on motor A to open door
+      digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
-    }  
+      // set speed to 200 out of possible range 0~255
+      analogWrite(enA, door_open_speed);
+  
+      if(digitalRead(REED_OPENED) == LOW) {
+        // now turn off motors when door is opened
+        digitalWrite(in1, LOW);
+        digitalWrite(in2, LOW);
+      }  
+    }
+    digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
+    digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
+    lcd.clear();
   }
-  digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
-  digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
-  lcd.clear();
 }
 
 
 void CloseDoor()
 {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Door Closing");
-  delay(500);
-  while( digitalRead(REED_CLOSED) == HIGH) {
-  // turn on motor A to close door
-  digitalWrite(in1, LOW);
-  digitalWrite(in2, HIGH);
-  // set speed to 200 out of possible range 0~255
-  analogWrite(enA, door_close_speed);
+  if ( digitalRead(REED_CLOSED) == HIGH) { // if door is not closed, close it
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Door Closing");
+    delay(500);
+    while( digitalRead(REED_CLOSED) == HIGH) {
+     // turn on motor A to close door
+     digitalWrite(in1, LOW);
+     digitalWrite(in2, HIGH);
+     // set speed to 200 out of possible range 0~255
+     analogWrite(enA, door_close_speed);
 
-  if(digitalRead(REED_CLOSED == LOW)) {
-    // now turn off motors when door is closed
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
-  }   
+     if(digitalRead(REED_CLOSED == LOW)) {
+       // now turn off motors when door is closed
+       digitalWrite(in1, LOW);
+       digitalWrite(in2, LOW);
+     }   
+   }
  }
 
  digitalWrite(LED_DOOR_OPEN, LOW);   // turn the LED off
