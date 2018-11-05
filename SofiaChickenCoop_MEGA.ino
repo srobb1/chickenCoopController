@@ -362,9 +362,9 @@ void DoorTimeCheck (){
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   float nowTime = nowHour + (static_cast<double>(nowMinute)/100);
@@ -423,9 +423,9 @@ void LightTimeCheck (){
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   float nowTime = nowHour + (static_cast<double>(nowMinute)/100);
@@ -479,9 +479,9 @@ void DisplaySunriseSunset (){
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
 
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   lcd.clear();
