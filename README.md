@@ -13,5 +13,5 @@ My chicken coop controller:
     - temp is colder than set min
     - temp is hotter than set max
     
- I use a Ardino Mega board
+ I use a Ardino Mega board.   
  I will someday list the specifics of the components and the board layout. It will be good for me to record the information somewher more permament than a notebook on my shelf.
