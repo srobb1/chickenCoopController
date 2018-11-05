@@ -419,7 +419,6 @@ void DoorTimeCheck (){
 
 
 void LightTimeCheck (){
-  // is it time to open or close the door?
   // get current time
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
@@ -460,12 +459,14 @@ void LightTimeCheck (){
 
   float diffTime = sunsetTime - sunriseTime;
  
-    // if day length is less than daylen hrs turn on light // default daylen=12
-  if (diffTime < daylen && nowTime == (sunsetTime - 1)){
+   // if day length is less than daylen hrs turn on light before sunrise 
+   // default daylen=12
+  if (diffTime < daylen && nowTime == (sunriseTime - (daylen - diffTime))){
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on 
     light = 1;
   }
-  if (diffTime < daylen && nowTime == (sunriseTime + daylen)){
+  // turn light off 2 hrs after sunrise
+  if (diffTime < daylen && nowTime == (sunriseTime + 2)){
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
     light = 0;
   }
