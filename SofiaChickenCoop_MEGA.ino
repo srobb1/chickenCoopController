@@ -14,8 +14,19 @@ const int TIMEZONE = 8;
 // RESET DATE/TIME
 int reset = 1;
 
-//*********** SENSORS ****************// 
-int tempSensorPin = 0;
+//*********** TEMP SENSORS ****************// 
+#include <DallasTemperature.h>
+#include <OneWire.h>
+
+// Data wire is conntec to the Arduino digital pin 4
+const int oneWireBus = 4;  
+
+// Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(oneWireBus);
+
+// Pass our oneWire reference to Dallas Temperature sensor 
+DallasTemperature sensors(&oneWire);
+
 
 //************ SWITCHES *****************//
 int P1=43; // Button SET MENU'
@@ -77,6 +88,7 @@ int menu2=0; // view temp high/low for day
 TimeLord tardis; 
 
 void setup(){
+  
   lcd.init(); //initialize the lcd
   lcd.backlight(); //open the backlight 
   lcd.begin(16, 2);
@@ -107,6 +119,7 @@ void setup(){
 
   Serial.begin(9600);
   Wire.begin();
+  sensors.begin();
 
   int menu=0;
   int menu1=0;
@@ -116,7 +129,11 @@ void setup(){
 void loop() {
 // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   DoorTimeCheck();
-  LightTimeCheck();
+  //LightTimeCheck(); //light not working. keep this to try to fix later. Was working when i tested, but stopped working when set up outside
+  
+   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
+  sensors.requestTemperatures(); 
+  
   recordTemp();
   CheckDoorStatus();
   delay(1000);   
@@ -198,20 +215,8 @@ void loop() {
 
 
 void recordTemp(){
-
-  //getting the voltage reading from the temperature sensor
-  int reading = analogRead(tempSensorPin);  
-
-  // converting that reading to voltage, for 3.3v arduino use 3.3
-  float voltage = reading * 5.0;
-  voltage /= 1024.0; 
-
-  // now print out the temperature
-  float temperatureC = (voltage - 0.5) * 100 ;  //converting from 10 mv per degree wit 500 mV offset
-  //to degrees ((voltage - 500mV) times 100)
-  // now convert to Fahrenheit
-  float temperatureF = (temperatureC * 9.0 / 5.0) + 32.0;
-
+  
+  float temperatureF = sensors.getTempFByIndex(0);
   DateTime now = rtc.now();
 
   int nowHour = now.hour();
@@ -362,9 +367,9 @@ void DoorTimeCheck (){
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   float nowTime = nowHour + (static_cast<double>(nowMinute)/100);
@@ -419,14 +424,13 @@ void DoorTimeCheck (){
 
 
 void LightTimeCheck (){
-  // is it time to open or close the door?
   // get current time
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   float nowTime = nowHour + (static_cast<double>(nowMinute)/100);
@@ -460,12 +464,14 @@ void LightTimeCheck (){
 
   float diffTime = sunsetTime - sunriseTime;
  
-    // if day length is less than daylen hrs turn on light // default daylen=12
-  if (diffTime < daylen && nowTime == (sunsetTime - 1)){
+   // if day length is less than daylen hrs turn on light before sunrise 
+   // default daylen=12
+  if (diffTime < daylen && nowTime == (sunriseTime - (daylen - diffTime))){
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on 
     light = 1;
   }
-  if (diffTime < daylen && nowTime == (sunriseTime + daylen)){
+  // turn light off 2 hrs after sunrise
+  if (diffTime < daylen && nowTime == (sunriseTime + 2)){
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
     light = 0;
   }
@@ -478,9 +484,9 @@ void DisplaySunriseSunset (){
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
 
-  int nowDay = now.day();
-  int nowMonth = now.month();
-  int nowYear = now.year();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  byte nowYear = now.year();
   int nowHour = now.hour();
   int nowMinute = now.minute();
   lcd.clear();
@@ -553,17 +559,8 @@ void DisplayDateTime (){
 
 
 void DisplayTemp(){
-  int reading = analogRead(tempSensorPin);  
 
-  // converting that reading to voltage, for 3.3v arduino use 3.3
-  float voltage = reading * 5.0;
-  voltage /= 1024.0; 
-
-  // now print out the temperature
-  float temperatureC = (voltage - 0.5) * 100 ;  //converting from 10 mv per degree wit 500 mV offset
-  //to degrees ((voltage - 500mV) times 100)
-  // now convert to Fahrenheit
-  float temperatureF = (temperatureC * 9.0 / 5.0) + 32.0;
+  float temperatureF = sensors.getTempFByIndex(0);
   lcd.print(temperatureF,1); 
   lcd.print("F");
 
@@ -839,6 +836,3 @@ void StoreAgg(){
   delay(1000);
   lcd.clear();
 }
-
-
-
