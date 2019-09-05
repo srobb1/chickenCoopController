@@ -12,7 +12,7 @@ float const LATITUDE = 41.1180;
 const int TIMEZONE = 8;
 
 // RESET DATE/TIME
-int reset = 1;
+int reset = 0;
 
 //*********** TEMP SENSORS ****************// 
 #include <DallasTemperature.h>
@@ -62,8 +62,11 @@ int dayupg;
 int secupg;
 
 
+// lcd status
+int lcdStatus = 0; //1=on 0=off
+
 // day light led and day length
-int light; //1=on 0=off
+int light = 0; //1=on 0=off
 int daylen = 12; 
 
 // door speed
@@ -81,7 +84,7 @@ float tempHigh = -1000.00; // setup temp
 float tempLow = 1000.00; // setup temp
 
 // menu default
-int menu =0; // set time and date and temp
+int menu=0; // set time and date and temp
 int menu1=0; // veiw sunrise/sunset info
 int menu2=0; // view temp high/low for day
 
@@ -90,9 +93,10 @@ TimeLord tardis;
 void setup(){
   
   lcd.init(); //initialize the lcd
-  lcd.backlight(); //open the backlight 
-  lcd.begin(16, 2);
-  lcd.clear();
+  //turnOnLCD();
+  //lcd.backlight(); //open the backlight 
+  //lcd.begin(16, 2);
+  //lcd.clear();
 
   pinMode(P1,INPUT); // set
   pinMode(P2,INPUT); // +
@@ -121,13 +125,15 @@ void setup(){
   Wire.begin();
   sensors.begin();
 
-  int menu=0;
-  int menu1=0;
-  int menu2=0;
+  int menu  = 0;
+  int menu1 = 0;
+  int menu2 = 0;
+  int light = 0;
 }
 
 void loop() {
 // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
   DoorTimeCheck();
   //LightTimeCheck(); //light not working. keep this to try to fix later. Was working when i tested, but stopped working when set up outside
   
@@ -139,39 +145,76 @@ void loop() {
   delay(1000);   
 
   if(digitalRead(P6)==LOW){
+    turnOnLCD();
     ManualDoorOverride();
     menu=0;
     menu1=0;
     menu2=0;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   } 
   if(digitalRead(P7)==LOW){
-    ManualDayLenLightOverride();
+    //turnOnLCD();
+    //ManualDayLenLightOverride();
+    turnOnLCD();
+    DisplayDateTime();
+    delay(5000);
+    DisplaySunriseSunset();
+    //delay(5000);
+    DisplayDailyHighLowTemp(); 
+    //delay(5000);
+    turnOffLCD();
   }  
   if(digitalRead(P1)==LOW) { // set
+    turnOnLCD();
     menu=menu+1;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
   if(digitalRead(P4)==LOW) { // sunrise sunset
+    turnOnLCD();
     menu1=menu1+1;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
   if(digitalRead(P5)==LOW) { // high low temp
+    turnOnLCD();
     menu2=menu2+1;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
 
 
   if (menu1>0){
+    turnOnLCD();
     DisplaySunriseSunset(); 
     menu1=0;
     menu=0;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
   if (menu2>0){
+    turnOnLCD();
     DisplayDailyHighLowTemp(); 
     menu2=0;
     menu=0;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
 
+  if (menu>0){
+    turnOnLCD();
+  }
 
   if (menu==0){
     DisplayDateTime(); 
+    menu=0;   
   }
   if (menu==1){
     DisplaySetHour();
@@ -208,6 +251,9 @@ void loop() {
     StoreAgg(); 
     delay(500);
     menu=0;
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }
   delay(100);
 }
@@ -244,7 +290,7 @@ void DisplayDailyHighLowTemp(){
   lcd.print("Daily High: ");
   lcd.print(tempHigh,0  );   
   lcd.print("F");
-  delay(2000);
+  delay(3000);
   lcd.clear();
 }
 
@@ -259,6 +305,7 @@ void CheckDoorStatus(){
   if(digitalRead(REED_OPENED) == LOW) { //|| digitalRead(REED_CLOSED) == HIGH) { //If the upper door reed pin reads low, the switch is closed. and the door is open
     digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
     digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
+    //lcdStatus=1;
   }
   else if (digitalRead(REED_CLOSED) == LOW) { //|| digitalRead(REED_OPENED) == HIGH ){ //If the lower reed pin reads low, the switch is closed. and the door is closed. or if hte open reed is far from magnet it is closed
     digitalWrite(LED_DOOR_OPEN, LOW);   // turn the LED on
@@ -280,7 +327,6 @@ void ManualDoorOverride(){
   else if (digitalRead(REED_CLOSED) == LOW ||digitalRead(REED_OPENED) == HIGH ){ //If the lower reed pin reads low, the switch is closed. and the door is closed. or if hte open reed is far from magnet it is closed
     OpenDoor();
   }
-
 }
 
 void ManualDayLenLightOverride(){
@@ -308,7 +354,7 @@ void ManualDayLenLightOverride(){
 
 
 void OpenDoor()
-{
+{ 
   if ( digitalRead(REED_OPENED) == HIGH) { // if door is not open, open it
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -329,13 +375,16 @@ void OpenDoor()
     }
     digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
     digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
+
     lcd.clear();
+
   }
 }
 
 
 void CloseDoor()
 {
+
   if ( digitalRead(REED_CLOSED) == HIGH) { // if door is not closed, close it
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -354,11 +403,12 @@ void CloseDoor()
        digitalWrite(in2, LOW);
      }   
    }
- }
 
+   lcd.clear();  
+
+ }
  digitalWrite(LED_DOOR_OPEN, LOW);   // turn the LED off
- digitalWrite(LED_DOOR_CLOSE, HIGH);   // turn the LED on 
- lcd.clear();
+ digitalWrite(LED_DOOR_CLOSE, HIGH);   // turn the LED on  
 }
 
 void DoorTimeCheck (){
@@ -389,6 +439,8 @@ void DoorTimeCheck (){
 
   // if now is sunrise time: open the door
   if (nowTime  == sunriseTime){ 
+    //lcdStatus=1;
+    //turnOnLCD();
     OpenDoor();
   }
 
@@ -418,7 +470,9 @@ void DoorTimeCheck (){
 
   // if now is sunset time + 30 min: close the door
   if (nowTime  == sunsetTime){
+    //lcdStatus=0;
     CloseDoor();
+    //turnOffLCD();
   }
 }
 
@@ -480,6 +534,7 @@ void LightTimeCheck (){
 
 
 void DisplaySunriseSunset (){ 
+  
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
@@ -509,7 +564,7 @@ void DisplaySunriseSunset (){
     lcd.print(":");
     lcd.print((int) today[tl_minute]);
   }
-  delay(2000);
+  delay(3000);
   lcd.clear();
 }
 
@@ -821,6 +876,16 @@ void DisplaySetHighTemp(){
   lcd.print(high_temp_level,0);
   delay(200);
 
+}
+
+void turnOnLCD(){
+  lcd.backlight(); //open the backlight 
+  lcd.begin(16, 2);
+  lcd.clear();
+}
+void turnOffLCD(){
+  lcd.noBacklight(); //open the backlight 
+  lcd.clear();
 }
 
 
