@@ -46,7 +46,7 @@ int LED_DOOR_CLOSE = 33;
 int HIGH_TEMP_WARNING = 34;
 int GOOD_TEMP_INDICATOR = 35;
 int LOW_TEMP_WARNING = 36;
-int LED_DAYLEN = 10;
+int LED_DAYLEN = 14;
 
 //********** MOTOR ********
 int enA = 15; // ~pwm
@@ -135,7 +135,7 @@ void loop() {
 // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   DoorTimeCheck();
-  //LightTimeCheck(); //light not working. keep this to try to fix later. Was working when i tested, but stopped working when set up outside
+  LightTimeCheck(); 
   
    // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
   sensors.requestTemperatures(); 
@@ -155,9 +155,10 @@ void loop() {
     }
   } 
   if(digitalRead(P7)==LOW){
-    //turnOnLCD();
-    //ManualDayLenLightOverride();
+
     turnOnLCD();
+    ManualDayLenLightOverride();
+    //turnOnLCD();
     DisplayDateTime();
     delay(5000);
     DisplaySunriseSunset();
@@ -337,7 +338,7 @@ void ManualDayLenLightOverride(){
   if (light == 0){
  // if(digitalRead(LED_DAYLEN) == LOW) { //if the day length led is off turn it on
     lcd.setCursor(0, 0);
-    lcd.print("turn on");
+    lcd.print("light turning on");
     delay(500);
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on
     light = 1;
@@ -345,7 +346,7 @@ void ManualDayLenLightOverride(){
   else if (light == 1){
  // else if (digitalRead(LED_DAYLEN) == HIGH){ //if the day length led is on turn it off
     lcd.setCursor(0, 0);
-    lcd.print("turn off");
+    lcd.print("light turning off");
     delay(500);
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
     light = 0;
@@ -360,19 +361,25 @@ void OpenDoor()
     lcd.setCursor(0, 0);
     lcd.print("Door Opening");
     delay(500);
-    while( digitalRead(REED_OPENED) == HIGH) {
+    long int tooLong = millis()+10000; // 10sec
+    while( digitalRead(REED_OPENED) == HIGH || millis() < tooLong) {
       // while the open reed is not connected turn on motor A to open door
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
       // set speed to 200 out of possible range 0~255
       analogWrite(enA, door_open_speed);
   
-      if(digitalRead(REED_OPENED) == LOW) {
-        // now turn off motors when door is opened
-        digitalWrite(in1, LOW);
-        digitalWrite(in2, LOW);
-      }  
-    }
+      //if(digitalRead(REED_OPENED) == LOW) {
+      //  // now turn off motors when door is opened
+      //  digitalWrite(in1, LOW);
+      //  digitalWrite(in2, LOW);
+      //}  
+    }// should exit while loop as soon as REED_OPENED is not HIGH
+
+    // now turn off motors when door is opened
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);  
+    
     digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
     digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
 
@@ -390,20 +397,23 @@ void CloseDoor()
     lcd.setCursor(0, 0);
     lcd.print("Door Closing");
     delay(500);
-    while( digitalRead(REED_CLOSED) == HIGH) {
+    long int tooLong = millis()+10000; // 10sec
+    while( digitalRead(REED_CLOSED) == HIGH || millis() < tooLong) {
      // turn on motor A to close door
      digitalWrite(in1, LOW);
      digitalWrite(in2, HIGH);
      // set speed to 200 out of possible range 0~255
      analogWrite(enA, door_close_speed);
 
-     if(digitalRead(REED_CLOSED == LOW)) {
-       // now turn off motors when door is closed
-       digitalWrite(in1, LOW);
-       digitalWrite(in2, LOW);
-     }   
-   }
-
+  //   if(digitalRead(REED_CLOSED == LOW)) {
+  //     // now turn off motors when door is closed
+  //     digitalWrite(in1, LOW);
+  //     digitalWrite(in2, LOW);
+  //    }   
+   }// should exit while loop as soon as REED_CLOSED is not HIGH
+   // now turn off motors when door is closed
+   digitalWrite(in1, LOW);
+   digitalWrite(in2, LOW);
    lcd.clear();  
 
  }
@@ -457,7 +467,7 @@ void DoorTimeCheck (){
 
 
   float sunsetTime;
-  if (sunsetMinute <= 30){
+  if (sunsetMinute < 30){
     sunsetTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
   }
   else{
@@ -465,7 +475,6 @@ void DoorTimeCheck (){
     sunsetHour++;
     sunsetMinute = diff;
     sunsetTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
-
   }
 
   // if now is sunset time + 30 min: close the door
@@ -566,6 +575,7 @@ void DisplaySunriseSunset (){
   }
   delay(3000);
   lcd.clear();
+
 }
 
 void DisplayDateTime (){
