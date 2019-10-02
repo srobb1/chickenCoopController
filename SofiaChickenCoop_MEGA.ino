@@ -160,7 +160,7 @@ void loop() {
     ManualDayLenLightOverride();
     //turnOnLCD();
     DisplayDateTime();
-    delay(5000);
+    delay(3000);
     DisplaySunriseSunset();
     //delay(5000);
     DisplayDailyHighLowTemp(); 
