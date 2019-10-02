@@ -368,12 +368,6 @@ void OpenDoor()
       digitalWrite(in2, LOW);
       // set speed to 200 out of possible range 0~255
       analogWrite(enA, door_open_speed);
-  
-      //if(digitalRead(REED_OPENED) == LOW) {
-      //  // now turn off motors when door is opened
-      //  digitalWrite(in1, LOW);
-      //  digitalWrite(in2, LOW);
-      //}  
     }// should exit while loop as soon as REED_OPENED is not HIGH
 
     // now turn off motors when door is opened
@@ -403,13 +397,7 @@ void CloseDoor()
      digitalWrite(in1, LOW);
      digitalWrite(in2, HIGH);
      // set speed to 200 out of possible range 0~255
-     analogWrite(enA, door_close_speed);
-
-  //   if(digitalRead(REED_CLOSED == LOW)) {
-  //     // now turn off motors when door is closed
-  //     digitalWrite(in1, LOW);
-  //     digitalWrite(in2, LOW);
-  //    }   
+     analogWrite(enA, door_close_speed); 
    }// should exit while loop as soon as REED_CLOSED is not HIGH
    // now turn off motors when door is closed
    digitalWrite(in1, LOW);
