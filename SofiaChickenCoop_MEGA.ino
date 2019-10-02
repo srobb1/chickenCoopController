@@ -46,7 +46,7 @@ int LED_DOOR_CLOSE = 33;
 int HIGH_TEMP_WARNING = 34;
 int GOOD_TEMP_INDICATOR = 35;
 int LOW_TEMP_WARNING = 36;
-int LED_DAYLEN = 14;
+int LED_DAYLEN = 10;
 
 //********** MOTOR ********
 int enA = 15; // ~pwm
@@ -67,7 +67,7 @@ int lcdStatus = 0; //1=on 0=off
 
 // day light led and day length
 int light = 0; //1=on 0=off
-int daylen = 12; 
+int daylen = 14; 
 
 // door speed
 int door_close_speed = 200;
@@ -335,18 +335,18 @@ void ManualDayLenLightOverride(){
   lcd.setCursor(0, 0);
   lcd.print("Light");
   delay(500);
-  if (light == 0){
- // if(digitalRead(LED_DAYLEN) == LOW) { //if the day length led is off turn it on
+ // if (light == 0){
+  if(digitalRead(LED_DAYLEN) == LOW) { //if the day length led is off turn it on
     lcd.setCursor(0, 0);
-    lcd.print("light turning on");
+    lcd.print("light going on");
     delay(500);
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on
     light = 1;
   }
-  else if (light == 1){
- // else if (digitalRead(LED_DAYLEN) == HIGH){ //if the day length led is on turn it off
+  // else if (light == 1){
+  else if (digitalRead(LED_DAYLEN) == HIGH){ //if the day length led is on turn it off
     lcd.setCursor(0, 0);
-    lcd.print("light turning off");
+    lcd.print("light going off");
     delay(500);
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
     light = 0;
