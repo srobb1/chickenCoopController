@@ -7,9 +7,13 @@ RTC_DS1307 rtc;
 LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 // longitude (west values negative) and latitude (south values negative)
-float const LONGITUDE =111.7677;
+float const LONGITUDE = -111.7677;
 float const LATITUDE = 41.1180;
-const int TIMEZONE = 8;
+
+//**** TIMEZONE ****/
+int DSTime = -6;
+int StandardTime = -7;
+int TIMEZONE = StandardTime;
 
 // RESET DATE/TIME
 int reset = 0;
@@ -91,12 +95,9 @@ int menu2=0; // view temp high/low for day
 TimeLord tardis; 
 
 void setup(){
-  
+  tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   lcd.init(); //initialize the lcd
-  //turnOnLCD();
-  //lcd.backlight(); //open the backlight 
-  //lcd.begin(16, 2);
-  //lcd.clear();
+
 
   pinMode(P1,INPUT); // set
   pinMode(P2,INPUT); // +
@@ -126,18 +127,15 @@ void setup(){
   sensors.begin();
 
   int menu  = 0;
-  int menu1 = 0;
-  int menu2 = 0;
-  int light = 0;
 }
 
 void loop() {
-// rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
+  DayLightSavingCheck();
   DoorTimeCheck();
   LightTimeCheck(); 
   
-   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
+  // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
   sensors.requestTemperatures(); 
   
   recordTemp();
@@ -148,8 +146,7 @@ void loop() {
     turnOnLCD();
     ManualDoorOverride();
     menu=0;
-    menu1=0;
-    menu2=0;
+
     if(lcdStatus==0){
        turnOffLCD();
     }
@@ -158,14 +155,11 @@ void loop() {
 
     turnOnLCD();
     ManualDayLenLightOverride();
-    //turnOnLCD();
-    DisplayDateTime();
+
     delay(3000);
-    DisplaySunriseSunset();
-    //delay(5000);
-    DisplayDailyHighLowTemp(); 
-    //delay(5000);
-    turnOffLCD();
+    if(lcdStatus==0){
+       turnOffLCD();
+    }
   }  
   if(digitalRead(P1)==LOW) { // set
     turnOnLCD();
@@ -174,40 +168,24 @@ void loop() {
        turnOffLCD();
     }
   }
+
   if(digitalRead(P4)==LOW) { // sunrise sunset
     turnOnLCD();
-    menu1=menu1+1;
+    DisplaySunriseSunset();
     if(lcdStatus==0){
        turnOffLCD();
     }
   }
   if(digitalRead(P5)==LOW) { // high low temp
     turnOnLCD();
-    menu2=menu2+1;
+    DisplayDailyHighLowTemp();
     if(lcdStatus==0){
        turnOffLCD();
     }
   }
+  
 
-
-  if (menu1>0){
-    turnOnLCD();
-    DisplaySunriseSunset(); 
-    menu1=0;
-    menu=0;
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
-  }
-  if (menu2>0){
-    turnOnLCD();
-    DisplayDailyHighLowTemp(); 
-    menu2=0;
-    menu=0;
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
-  }
+ 
 
   if (menu>0){
     turnOnLCD();
@@ -298,6 +276,21 @@ void DisplayDailyHighLowTemp(){
 
 
 
+void DayLightSavingCheck(){
+  DateTime now = rtc.now();
+  byte nowDay = now.day();
+  byte nowMonth = now.month();
+  // March 3 -> Nov 10 is DST
+  // Rest of the year is Standard Time 
+  if (  (nowMonth == 3 and nowDay >= 10) or (nowMonth >3 and nowMonth <11) or (nowMonth ==11 and nowDay <= 3) ){
+    TIMEZONE = DSTime;
+  }else{
+    TIMEZONE = StandardTime;
+  } 
+  tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
+}
+
+
 // LOW means the magnet is close to the reed switch
 // HIGH means the magnet is not close to the switch
 
@@ -335,21 +328,17 @@ void ManualDayLenLightOverride(){
   lcd.setCursor(0, 0);
   lcd.print("Light");
   delay(500);
- // if (light == 0){
   if(digitalRead(LED_DAYLEN) == LOW) { //if the day length led is off turn it on
     lcd.setCursor(0, 0);
     lcd.print("light going on");
     delay(500);
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on
-    light = 1;
   }
-  // else if (light == 1){
   else if (digitalRead(LED_DAYLEN) == HIGH){ //if the day length led is on turn it off
     lcd.setCursor(0, 0);
     lcd.print("light going off");
     delay(500);
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
-    light = 0;
   }
 }
 
@@ -361,7 +350,7 @@ void OpenDoor()
     lcd.setCursor(0, 0);
     lcd.print("Door Opening");
     delay(500);
-    long int tooLong = millis()+10000; // 10sec
+    long int tooLong = millis()+5000; // 5sec
     while( digitalRead(REED_OPENED) == HIGH || millis() < tooLong) {
       // while the open reed is not connected turn on motor A to open door
       digitalWrite(in1, HIGH);
@@ -391,7 +380,7 @@ void CloseDoor()
     lcd.setCursor(0, 0);
     lcd.print("Door Closing");
     delay(500);
-    long int tooLong = millis()+10000; // 10sec
+    long int tooLong = millis()+5000; // 5sec
     while( digitalRead(REED_CLOSED) == HIGH || millis() < tooLong) {
      // turn on motor A to close door
      digitalWrite(in1, LOW);
@@ -412,8 +401,8 @@ void CloseDoor()
 void DoorTimeCheck (){
   // is it time to open or close the door?
   // get current time
-  tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
-  tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
+
+
   DateTime now = rtc.now();
   byte nowDay = now.day();
   byte nowMonth = now.month();
@@ -454,19 +443,21 @@ void DoorTimeCheck (){
   }
 
 
-  float sunsetTime;
+  float sunsetTime   = sunsetHour + (static_cast<double>(sunsetMinute)/100);
+  float doorCloseTime;
+  
   if (sunsetMinute < 30){
-    sunsetTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
+    doorCloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
   }
   else{
     float diff = sunsetMinute - 30;
     sunsetHour++;
     sunsetMinute = diff;
-    sunsetTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
+    doorCloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
   }
 
   // if now is sunset time + 30 min: close the door
-  if (nowTime  == sunsetTime){
+  if (nowTime  == doorCloseTime){
     //lcdStatus=0;
     CloseDoor();
     //turnOffLCD();
@@ -476,8 +467,6 @@ void DoorTimeCheck (){
 
 void LightTimeCheck (){
   // get current time
-  tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
-  tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   DateTime now = rtc.now();
   byte nowDay = now.day();
   byte nowMonth = now.month();
@@ -519,12 +508,10 @@ void LightTimeCheck (){
    // default daylen=12
   if (diffTime < daylen && nowTime == (sunriseTime - (daylen - diffTime))){
     digitalWrite(LED_DAYLEN, HIGH);   // turn the LED on 
-    light = 1;
   }
   // turn light off 2 hrs after sunrise
   if (diffTime < daylen && nowTime == (sunriseTime + 2)){
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
-    light = 0;
   }
   
 }
@@ -532,8 +519,7 @@ void LightTimeCheck (){
 
 void DisplaySunriseSunset (){ 
   
-  tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
-  tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
+
   DateTime now = rtc.now();
 
   byte nowDay = now.day();
@@ -550,6 +536,9 @@ void DisplaySunriseSunset (){
     lcd.print("Sunrise: ");
     lcd.print((int) today[tl_hour]);
     lcd.print(":");
+    if ((int) today[tl_minute] < 10){
+      lcd.print(0);
+    }
     lcd.print((int) today[tl_minute]);
   }
   lcd.setCursor(0, 1);
@@ -559,9 +548,62 @@ void DisplaySunriseSunset (){
     lcd.print("Sunset: ");
     lcd.print((int) today[tl_hour]);
     lcd.print(":");
+    if ((int) today[tl_minute] < 10){
+      lcd.print(0);
+    }
     lcd.print((int) today[tl_minute]);
   }
+  delay(2500);
+  lcd.clear();
+
+   byte sunset[] = {  
+    0, 0, 12, nowDay, nowMonth, nowYear      }; // store today's date (at noon) in an array for TimeLord to use
+  lcd.setCursor(0, 0);
+  if (tardis.SunSet(sunset)) // if the sun will rise today (it might not, in the [ant]arctic)
+  {
+
+  int sunsetHour = ((int) sunset[tl_hour]);
+  int sunsetMinute = ((int) sunset[tl_minute]);
+    
+    lcd.print("Sunset:  ");
+    lcd.print((int) sunsetHour);
+    lcd.print(":");
+    if (sunsetMinute < 10){
+      lcd.print(0);
+    }
+    lcd.print((int) sunsetMinute);
+
+    lcd.setCursor(0, 1);
+    float doorcloseTime;
+    int doorCloseHour;
+    int doorCloseMin;
+    if (sunsetMinute < 30){
+      doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
+      doorCloseMin = sunsetMinute + 30;
+    }
+    else{
+      float diff = sunsetMinute - 30;
+      doorCloseHour = sunsetHour + 1;
+      doorCloseMin =  diff;
+ 
+      doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
+    }
+
+    
+
+    lcd.print("Closing: ");
+    lcd.print((int) doorCloseHour);
+    lcd.print(":");
+    if (doorCloseMin < 10){
+      lcd.print(0);
+    }
+    lcd.print((int) doorCloseMin);
+  }
   delay(3000);
+
+
+
+  
   lcd.clear();
 
 }
@@ -662,7 +704,7 @@ void DisplaySetHour(){
   lcd.print("Set Hour:");
   lcd.setCursor(0,1);
   lcd.print(hourupg,DEC);
-  delay(200);
+  delay(100);
 }
 
 
@@ -692,7 +734,7 @@ void DisplaySetMinute(){
   lcd.print("Set Minutes:");
   lcd.setCursor(0,1);
   lcd.print(minupg,DEC);
-  delay(200);
+  delay(100);
 }
 
 
@@ -711,7 +753,7 @@ void DisplaySetYear(){
   lcd.print("Set Year:");
   lcd.setCursor(0,1);
   lcd.print(yearupg,DEC);
-  delay(200);
+  delay(100);
 }
 
 
@@ -740,7 +782,7 @@ void DisplaySetMonth(){
   lcd.print("Set Month:");
   lcd.setCursor(0,1);
   lcd.print(monthupg,DEC);
-  delay(200);
+  delay(100);
 }
 
 
@@ -770,7 +812,7 @@ void DisplaySetDay(){
   lcd.print("Set Day:");
   lcd.setCursor(0,1);
   lcd.print(dayupg,DEC);
-  delay(200);
+  delay(100);
 
 }
 
@@ -794,7 +836,7 @@ void DisplaySetDoorCloseSpeed(){
   lcd.print("Set DoorCloseSpd:");
   lcd.setCursor(0,1);
   lcd.print(door_close_speed,DEC);
-  delay(200);
+  delay(100);
 }
 
 void DisplaySetDoorOpenSpeed(){
@@ -816,7 +858,7 @@ void DisplaySetDoorOpenSpeed(){
   lcd.print("Set DoorOpenSpd:");
   lcd.setCursor(0,1);
   lcd.print(door_open_speed,DEC);
-  delay(200);
+  delay(100);
 }
 
 
@@ -834,7 +876,7 @@ void DisplaySetDayLen(){
   lcd.print("Set Day Len:");
   lcd.setCursor(0,1);
   lcd.print(daylen,DEC);
-  delay(200);
+  delay(100);
 
 }
 
@@ -853,7 +895,7 @@ void DisplaySetLowTemp(){
   lcd.print("Set Low Temp:");
   lcd.setCursor(0,1);
   lcd.print(low_temp_level,0);
-  delay(200);
+  delay(100);
 
 }
 
@@ -872,7 +914,7 @@ void DisplaySetHighTemp(){
   lcd.print("Set High Temp:");
   lcd.setCursor(0,1);
   lcd.print(high_temp_level,0);
-  delay(200);
+  delay(100);
 
 }
 
