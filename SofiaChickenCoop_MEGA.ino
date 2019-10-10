@@ -95,6 +95,25 @@ int menu2=0; // view temp high/low for day
 TimeLord tardis; 
 
 void setup(){
+
+  rtc.begin();
+
+  if (! rtc.isrunning()) {
+    Serial.println("RTC is NOT running!");
+    turnOnLCD();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("RTC is NOT running!");
+    delay(3000);  
+    turnOffLCD();
+  }
+
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  if (reset == 1){
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+
+  
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
   lcd.init(); //initialize the lcd
 
@@ -117,10 +136,7 @@ void setup(){
   pinMode(GOOD_TEMP_INDICATOR, OUTPUT);
   pinMode(LOW_TEMP_WARNING, OUTPUT);
   pinMode(LED_DAYLEN, OUTPUT);
-  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  if (reset == 1){
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
+
 
   Serial.begin(9600);
   Wire.begin();
@@ -155,10 +171,12 @@ void loop() {
 
     turnOnLCD();
     ManualDayLenLightOverride();
-
+ 
     delay(3000);
-    if(lcdStatus==0){
-       turnOffLCD();
+    if ( (digitalRead(LED_DAYLEN) == LOW) and lcdStatus==0 ) {   
+        // turn off backlight if light is off
+        // if light is on leave backlight on
+        turnOffLCD();  
     }
   }  
   if(digitalRead(P1)==LOW) { // set
@@ -502,7 +520,7 @@ void LightTimeCheck (){
 
   float  sunsetTime = sunsetHour + (static_cast<double>(sunsetMinute)/100);
 
-  float diffTime = sunsetTime - sunriseTime;
+  int diffTime = round(sunsetTime - sunriseTime);
  
    // if day length is less than daylen hrs turn on light before sunrise 
    // default daylen=12
@@ -636,7 +654,7 @@ void DisplayDateTime (){
   if (hourupg<=9) {
     lcd.print("0");
   }
-  lcd.print(hourupg, DEC);
+  lcd.print(hourupg`, DEC);
   lcd.print(":");
 
   if (minupg<=9) {
