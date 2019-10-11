@@ -66,11 +66,8 @@ int dayupg;
 int secupg;
 
 
-// lcd status
-int lcdStatus = 0; //1=on 0=off
-
 // day light led and day length
-int light = 0; //1=on 0=off
+long int  lightOn = 0; //0=off millistimestamp=ON
 int daylen = 14; 
 
 // door speed
@@ -89,8 +86,6 @@ float tempLow = 1000.00; // setup temp
 
 // menu default
 int menu=0; // set time and date and temp
-int menu1=0; // veiw sunrise/sunset info
-int menu2=0; // view temp high/low for day
 
 TimeLord tardis; 
 
@@ -162,44 +157,42 @@ void loop() {
     turnOnLCD();
     ManualDoorOverride();
     menu=0;
-
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
+    turnOffLCD();
+   
   } 
   if(digitalRead(P7)==LOW){
 
     turnOnLCD();
     ManualDayLenLightOverride();
- 
+    // only keep on for 5min(300,000ms)
+    if (lightOn > 0 and ( (millis() - lightOn) > 300000) ){
+       digitalWrite(LED_DAYLEN,LOW);
+       lightOn=0;
+    }
     delay(3000);
-    if ( (digitalRead(LED_DAYLEN) == LOW) and lcdStatus==0 ) {   
+    
+    if ( (digitalRead(LED_DAYLEN) == LOW)  ) {   
         // turn off backlight if light is off
         // if light is on leave backlight on
-        turnOffLCD();  
+        turnOffLCD();
+        lightOn=0;  
     }
   }  
   if(digitalRead(P1)==LOW) { // set
     turnOnLCD();
     menu=menu+1;
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
+    turnOffLCD();
   }
 
   if(digitalRead(P4)==LOW) { // sunrise sunset
     turnOnLCD();
     DisplaySunriseSunset();
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
+    turnOffLCD();
   }
   if(digitalRead(P5)==LOW) { // high low temp
     turnOnLCD();
     DisplayDailyHighLowTemp();
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
+    turnOffLCD();
   }
   
 
@@ -248,9 +241,7 @@ void loop() {
     StoreAgg(); 
     delay(500);
     menu=0;
-    if(lcdStatus==0){
-       turnOffLCD();
-    }
+    turnOffLCD();
   }
   delay(100);
 }
@@ -317,7 +308,6 @@ void CheckDoorStatus(){
   if(digitalRead(REED_OPENED) == LOW) { //|| digitalRead(REED_CLOSED) == HIGH) { //If the upper door reed pin reads low, the switch is closed. and the door is open
     digitalWrite(LED_DOOR_OPEN, HIGH);   // turn the LED on
     digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
-    //lcdStatus=1;
   }
   else if (digitalRead(REED_CLOSED) == LOW) { //|| digitalRead(REED_OPENED) == HIGH ){ //If the lower reed pin reads low, the switch is closed. and the door is closed. or if hte open reed is far from magnet it is closed
     digitalWrite(LED_DOOR_OPEN, LOW);   // turn the LED on
@@ -347,6 +337,7 @@ void ManualDayLenLightOverride(){
   lcd.print("Light");
   delay(500);
   if(digitalRead(LED_DAYLEN) == LOW) { //if the day length led is off turn it on
+    lightOn = millis(); // timestamp time light is turned on
     lcd.setCursor(0, 0);
     lcd.print("light going on");
     delay(500);
@@ -357,6 +348,7 @@ void ManualDayLenLightOverride(){
     lcd.print("light going off");
     delay(500);
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
+    lightOn=0;
   }
 }
 
@@ -444,8 +436,6 @@ void DoorTimeCheck (){
 
   // if now is sunrise time: open the door
   if (nowTime  == sunriseTime){ 
-    //lcdStatus=1;
-    //turnOnLCD();
     OpenDoor();
   }
 
@@ -476,9 +466,7 @@ void DoorTimeCheck (){
 
   // if now is sunset time + 30 min: close the door
   if (nowTime  == doorCloseTime){
-    //lcdStatus=0;
     CloseDoor();
-    //turnOffLCD();
   }
 }
 
@@ -654,7 +642,7 @@ void DisplayDateTime (){
   if (hourupg<=9) {
     lcd.print("0");
   }
-  lcd.print(hourupg`, DEC);
+  lcd.print(hourupg, DEC);
   lcd.print(":");
 
   if (minupg<=9) {
