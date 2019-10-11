@@ -67,7 +67,7 @@ int secupg;
 
 
 // day light led and day length
-long int  lightOn = 0; //0=off millistimestamp=ON
+long int  lightOn = 0; //manual light 0=off millistimestamp=ON
 int daylen = 14; 
 
 // door speed
@@ -144,14 +144,15 @@ void loop() {
 
   DayLightSavingCheck();
   DoorTimeCheck();
-  LightTimeCheck(); 
+  LightTimeCheck();
+  ManualLightTimer(); 
   
   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
   sensors.requestTemperatures(); 
   
   recordTemp();
   CheckDoorStatus();
-  delay(1000);   
+  delay(500);   
 
   if(digitalRead(P6)==LOW){
     turnOnLCD();
@@ -164,13 +165,7 @@ void loop() {
 
     turnOnLCD();
     ManualDayLenLightOverride();
-    // only keep on for 5min(300,000ms)
-    if (lightOn > 0 and ( (millis() - lightOn) > 300000) ){
-       digitalWrite(LED_DAYLEN,LOW);
-       lightOn=0;
-    }
-    delay(3000);
-    
+    delay(500);
     turnOffLCD();
   }  
   if(digitalRead(P1)==LOW) { // set
@@ -241,7 +236,14 @@ void loop() {
   delay(100);
 }
 
+void ManualLightTimer(){
 
+      // if manual light on, only keep on for 5min(300,000ms)
+    if (lightOn > 0 and ( (millis() - lightOn) > 300000) ){
+       digitalWrite(LED_DAYLEN,LOW);
+       lightOn=0;
+    }
+}
 
 void recordTemp(){
   
