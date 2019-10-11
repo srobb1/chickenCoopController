@@ -171,12 +171,7 @@ void loop() {
     }
     delay(3000);
     
-    if ( (digitalRead(LED_DAYLEN) == LOW)  ) {   
-        // turn off backlight if light is off
-        // if light is on leave backlight on
-        turnOffLCD();
-        lightOn=0;  
-    }
+    turnOffLCD();
   }  
   if(digitalRead(P1)==LOW) { // set
     turnOnLCD();
