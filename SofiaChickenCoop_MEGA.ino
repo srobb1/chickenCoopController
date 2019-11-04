@@ -16,7 +16,7 @@ int StandardTime = -7;
 int TIMEZONE = StandardTime;
 
 // RESET DATE/TIME
-int reset = 0;
+int reset = 1;
 
 //*********** TEMP SENSORS ****************// 
 #include <DallasTemperature.h>
@@ -66,8 +66,11 @@ int dayupg;
 int secupg;
 
 
+
 // day light led and day length
 long int  lightOn = 0; //manual light 0=off millistimestamp=ON
+
+// how long should the chicks have light?
 int daylen = 14; 
 
 // door speed
@@ -288,13 +291,21 @@ void DayLightSavingCheck(){
   byte nowMonth = now.month();
   // March 3 -> Nov 10 is DST
   // Rest of the year is Standard Time 
-  if (  (nowMonth == 3 and nowDay >= 10) or (nowMonth >3 and nowMonth <11) or (nowMonth ==11 and nowDay <= 3) ){
+  if (  (nowMonth == 3 and nowDay >= 10) or (nowMonth >3 and nowMonth <11) or (nowMonth ==11 and nowDay < 3) ){
     TIMEZONE = DSTime;
   }else{
     TIMEZONE = StandardTime;
   } 
   tardis.TimeZone(TIMEZONE * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
+    Serial.print("\n");
+     Serial.print("\n");
+     Serial.print("DST(-6) or STANDARD(-7)");
+     Serial.print("\n");
+     Serial.print(TIMEZONE);
+     Serial.print("\n");
+
 }
+
 
 
 // LOW means the magnet is close to the reed switch
@@ -358,7 +369,7 @@ void OpenDoor()
     lcd.print("Door Opening");
     delay(500);
     long int tooLong = millis()+5000; // 5sec
-    while( digitalRead(REED_OPENED) == HIGH || millis() < tooLong) {
+    while( digitalRead(REED_OPENED) == HIGH || millis() > tooLong) {
       // while the open reed is not connected turn on motor A to open door
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
@@ -388,7 +399,7 @@ void CloseDoor()
     lcd.print("Door Closing");
     delay(500);
     long int tooLong = millis()+5000; // 5sec
-    while( digitalRead(REED_CLOSED) == HIGH || millis() < tooLong) {
+    while( digitalRead(REED_CLOSED) == HIGH || millis() > tooLong) {
      // turn on motor A to close door
      digitalWrite(in1, LOW);
      digitalWrite(in2, HIGH);
@@ -418,6 +429,7 @@ void DoorTimeCheck (){
   int nowMinute = now.minute();
   float nowTime = nowHour + (static_cast<double>(nowMinute)/100);
 
+  
   // is is sunrise?
   int sunriseHour = 0;
   int sunriseMinute = 0;
@@ -465,10 +477,30 @@ void DoorTimeCheck (){
   if (nowTime  == doorCloseTime){
     CloseDoor();
   }
+     Serial.print("\n");
+     Serial.print("\n");
+     Serial.print("DOOR TIME CHECK");
+     Serial.print("\n");
+     Serial.print("nowtime: ");
+     Serial.print(nowTime);
+     Serial.print("\n");
+     Serial.print("sunsettime: ");
+     Serial.print(sunsetTime);
+     Serial.print("\n");
+     Serial.print("doorcloseTime: ");
+     Serial.print(doorCloseTime);
+     Serial.print("\n");
+     Serial.print("close door if ");
+     Serial.print(nowTime);    
+     Serial.print(" = ");
+     Serial.print(doorCloseTime);     
+     Serial.print("\n");
+     Serial.print("\n");
+  
 }
 
 
-void LightTimeCheck (){
+void LightTimeCheck(){
   // get current time
   DateTime now = rtc.now();
   byte nowDay = now.day();
@@ -516,11 +548,31 @@ void LightTimeCheck (){
   if (diffTime < daylen && nowTime == (sunriseTime + 2)){
     digitalWrite(LED_DAYLEN, LOW);   // turn the LED off
   }
-  
+  Serial.print("\n");
+  Serial.print("LIGHT TIME CHECK");
+  Serial.print("\n");
+  Serial.print("nowtime: ");
+  Serial.print(nowTime);
+  Serial.print("\n");
+  Serial.print("difftime: ");
+  Serial.print(diffTime);
+  Serial.print("\n");
+  Serial.print("sunrisetime: ");
+  Serial.print(sunriseTime);
+  Serial.print("\n");
+  Serial.print("sunsettime: ");
+  Serial.print(sunsetTime);
+  Serial.print("\n");
+  Serial.print(" light on time: ");
+  Serial.print(sunriseTime - (daylen - diffTime));
+  Serial.print("\n");
+  Serial.print(" light off time: ");
+  Serial.print(sunriseTime + 2);    
+  Serial.print("\n");
 }
 
 
-void DisplaySunriseSunset (){ 
+void DisplaySunriseSunset(){ 
   
 
   DateTime now = rtc.now();
@@ -577,22 +629,22 @@ void DisplaySunriseSunset (){
     lcd.print((int) sunsetMinute);
 
     lcd.setCursor(0, 1);
-    float doorcloseTime;
+    //float doorcloseTime;
     int doorCloseHour;
     int doorCloseMin;
     if (sunsetMinute < 30){
-      doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
+      //doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) + 0.30 ;//close door 30min after sunset
       doorCloseMin = sunsetMinute + 30;
+      doorCloseHour = sunsetHour;
     }
     else{
       float diff = sunsetMinute - 30;
       doorCloseHour = sunsetHour + 1;
       doorCloseMin =  diff;
  
-      doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
+      //doorcloseTime = sunsetHour + (static_cast<double>(sunsetMinute)/100) ;
     }
 
-    
 
     lcd.print("Closing: ");
     lcd.print((int) doorCloseHour);
@@ -601,6 +653,8 @@ void DisplaySunriseSunset (){
       lcd.print(0);
     }
     lcd.print((int) doorCloseMin);
+
+
   }
   delay(3000);
 
