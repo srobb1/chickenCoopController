@@ -16,7 +16,7 @@ int StandardTime = -7;
 int TIMEZONE = StandardTime;
 
 // RESET DATE/TIME
-int reset = 1;
+int reset = 0;
 
 //*********** TEMP SENSORS ****************// 
 #include <DallasTemperature.h>
@@ -363,13 +363,21 @@ void ManualDayLenLightOverride(){
 
 void OpenDoor()
 { 
+  int doorClosed = 0;
   if ( digitalRead(REED_OPENED) == HIGH) { // if door is not open, open it
+    doorClosed = 1;
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Door Opening");
     delay(500);
-    long int tooLong = millis()+5000; // 5sec
-    while( digitalRead(REED_OPENED) == HIGH || millis() > tooLong) {
+    long int tooLong = millis()+20000; // 5sec
+    while( doorClosed ) {
+      if (millis() > tooLong) {
+        doorClosed = 0;
+      }
+      else if ( digitalRead(REED_OPENED) == LOW ){
+        doorClosed = 0;
+      }
       // while the open reed is not connected turn on motor A to open door
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
@@ -385,21 +393,26 @@ void OpenDoor()
     digitalWrite(LED_DOOR_CLOSE, LOW);   // turn the LED off 
 
     lcd.clear();
-
   }
 }
 
 
 void CloseDoor()
 {
-
+  int doorOpen = 0;
   if ( digitalRead(REED_CLOSED) == HIGH) { // if door is not closed, close it
+    doorOpen = 1;
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Door Closing");
     delay(500);
-    long int tooLong = millis()+5000; // 5sec
-    while( digitalRead(REED_CLOSED) == HIGH || millis() > tooLong) {
+    long int tooLong = millis()+15000; // 5sec
+    while ( doorOpen ){
+      if (millis() > tooLong){
+        doorOpen = 0;
+      }else if(digitalRead(REED_CLOSED) == LOW){
+        doorOpen = 0;
+      }  
      // turn on motor A to close door
      digitalWrite(in1, LOW);
      digitalWrite(in2, HIGH);
